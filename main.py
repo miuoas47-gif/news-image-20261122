@@ -3,7 +3,8 @@
 
 Copies the bundled poster (entry.png) from this script's own directory to
 $MAKEFUN_OUTPUT_DIR/entry.png (default "output"), then verifies the copy is
-byte-identical to the bundled image. Exits non-zero if anything is wrong.
+byte-identical to the bundled image: first a file-size check, then a full
+SHA-256 comparison. Exits non-zero if anything is wrong.
 Stdlib only, no arguments, deterministic.
 """
 import hashlib
@@ -36,6 +37,17 @@ def main():
 
     shutil.copyfile(source, destination)
 
+    # Fast pre-check: sizes must match before the byte-level hash comparison.
+    expected_size = os.path.getsize(source)
+    actual_size = os.path.getsize(destination)
+    if actual_size != expected_size:
+        print(
+            f"error: output verification failed: {destination} "
+            f"size {actual_size} != bundled {expected_size}",
+            file=sys.stderr,
+        )
+        return 1
+
     expected = sha256_of(source)
     actual = sha256_of(destination)
     if actual != expected:
@@ -46,7 +58,7 @@ def main():
         )
         return 1
 
-    print(f"copied {source} -> {destination} (sha256 {actual})")
+    print(f"copied {source} -> {destination} ({actual_size} bytes, sha256 {actual})")
     return 0
 
 
